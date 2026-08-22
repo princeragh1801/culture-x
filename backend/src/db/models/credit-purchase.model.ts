@@ -43,6 +43,7 @@ export class CreditPurchase extends Model<
   declare amountPaise: number;
   declare status: CreationOptional<PurchaseStatus>;
   declare stripeCheckoutSessionId: CreationOptional<string | null>;
+  declare stripeCheckoutUrl: CreationOptional<string | null>;
   declare stripePaymentIntentId: CreationOptional<string | null>;
   declare ledgerEntryId: CreationOptional<ForeignKey<LedgerEntry['id']> | null>;
   declare requestIdempotencyKey: CreationOptional<string | null>;
@@ -66,6 +67,7 @@ CreditPurchase.init(
     amountPaise: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
     status: { type: DataTypes.ENUM(...PURCHASE_STATUSES), allowNull: false, defaultValue: 'PENDING' },
     stripeCheckoutSessionId: { type: DataTypes.STRING(191), allowNull: true },
+    stripeCheckoutUrl: { type: DataTypes.STRING(2048), allowNull: true },
     stripePaymentIntentId: { type: DataTypes.STRING(191), allowNull: true },
     ledgerEntryId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true },
     requestIdempotencyKey: { type: DataTypes.STRING(191), allowNull: true },
