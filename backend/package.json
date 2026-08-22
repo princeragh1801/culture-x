@@ -1,11 +1,49 @@
 {
-  "name": "backend",
+  "name": "culturex-backend",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+  "description": "Multi-currency credits wallet and campaign funding API",
+  "main": "dist/server.js",
   "author": "Prince",
-  "license": "ISC"
+  "license": "ISC",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "migrate": "cross-env NODE_OPTIONS=--import=tsx sequelize-cli db:migrate",
+    "migrate:undo": "cross-env NODE_OPTIONS=--import=tsx sequelize-cli db:migrate:undo",
+    "migrate:undo:all": "cross-env NODE_OPTIONS=--import=tsx sequelize-cli db:migrate:undo:all",
+    "migrate:status": "cross-env NODE_OPTIONS=--import=tsx sequelize-cli db:migrate:status",
+    "seed": "cross-env NODE_OPTIONS=--import=tsx sequelize-cli db:seed:all",
+    "seed:undo": "cross-env NODE_OPTIONS=--import=tsx sequelize-cli db:seed:undo:all",
+    "db:reset": "npm run migrate:undo:all && npm run migrate && npm run seed",
+    "db:test:reset": "cross-env NODE_ENV=test npm run migrate:undo:all && cross-env NODE_ENV=test npm run migrate && cross-env NODE_ENV=test npm run seed",
+    "test": "cross-env NODE_ENV=test vitest run",
+    "test:watch": "cross-env NODE_ENV=test vitest"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.15.3",
+    "sequelize": "^6.37.7",
+    "stripe": "^19.1.0",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^22.18.8",
+    "@types/supertest": "^6.0.3",
+    "cross-env": "^10.1.0",
+    "sequelize-cli": "^6.6.3",
+    "supertest": "^7.1.4",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
 }

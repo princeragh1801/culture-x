@@ -1,0 +1,39 @@
+# Local MySQL for the CultureX credits wallet.
+#
+# Two databases are created by docker/mysql/init/01-create-databases.sql:
+#   culturex_dev   — the database the API runs against
+#   culturex_test  — the database the integration test suite runs against
+#
+# The test suite exercises row locks, unique constraints and UNSIGNED underflow,
+# so it needs a real MySQL rather than an in-memory stand-in.
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: culturex_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_USER: ${MYSQL_USER:-culturex}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-culturex}
+    command:
+      # STRICT_ALL_TABLES turns a BIGINT UNSIGNED underflow into an error instead of
+      # a silently clamped value — that is what makes a negative balance impossible.
+      - --sql-mode=STRICT_ALL_TABLES,NO_ENGINE_SUBSTITUTION,ERROR_FOR_DIVISION_BY_ZERO
+      - --transaction-isolation=REPEATABLE-READ
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+    ports:
+      - "${MYSQL_HOST_PORT:-3307}:3306"
+    volumes:
+      - culturex_mysql_data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-root}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
+volumes:
+  culturex_mysql_data:

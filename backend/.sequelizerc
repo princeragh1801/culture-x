@@ -1,0 +1,13 @@
+// sequelize-cli entry point.
+//
+// The TypeScript loader is registered through NODE_OPTIONS=--import=tsx in the
+// npm scripts rather than here: the CLI loads its config file with a dynamic
+// import(), which a require-only hook such as ts-node/register cannot intercept.
+const path = require('path');
+
+module.exports = {
+  config: path.resolve(__dirname, 'src', 'config', 'sequelize-cli.ts'),
+  'models-path': path.resolve(__dirname, 'src', 'db', 'models'),
+  'migrations-path': path.resolve(__dirname, 'src', 'db', 'migrations'),
+  'seeders-path': path.resolve(__dirname, 'src', 'db', 'seeders'),
+};
