@@ -130,6 +130,40 @@ describe('wallet invariants', () => {
     expect(amounts).toEqual([-120, 300]);
   });
 
+  /**
+   * Regression: the wallet response serialises whole currency objects, and the
+   * buy-credits screen prices bundles from them. An earlier version of
+   * getWalletSummary did not load the plans association, so every currency came
+   * back with an empty plans array and the UI had nothing to offer.
+   */
+  it('returns each currency with its bundles attached', async () => {
+    const wallet = await request(app)
+      .get('/api/wallet')
+      .set('Authorization', user.auth)
+      .expect(200);
+
+    for (const balance of wallet.body.balances) {
+      expect(balance.currency.plans.length).toBeGreaterThan(0);
+      expect(balance.currency.module).not.toBeNull();
+
+      for (const plan of balance.currency.plans) {
+        expect(plan.credits).toBeGreaterThan(0);
+        expect(plan.pricePaise).toBeGreaterThan(0);
+      }
+    }
+
+    // Same shape as the dedicated catalogue endpoint, so the two cannot drift.
+    const currencies = await request(app)
+      .get('/api/currencies')
+      .set('Authorization', user.auth)
+      .expect(200);
+
+    const planCount = (list: { plans: unknown[] }[]) => list.map((item) => item.plans.length);
+    expect(planCount(wallet.body.balances.map((b: { currency: { plans: unknown[] } }) => b.currency))).toEqual(
+      planCount(currencies.body.currencies),
+    );
+  });
+
   it('shows one user nothing of another user’s wallet', async () => {
     await buyAndPay(user, campaignId, 750, 'priv');
 

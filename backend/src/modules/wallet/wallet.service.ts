@@ -1,5 +1,12 @@
 import type { Transaction } from 'sequelize';
-import { Currency, LedgerEntry, PlatformModule, Wallet, WalletBalance } from '../../db/models';
+import {
+  Currency,
+  CurrencyPlan,
+  LedgerEntry,
+  PlatformModule,
+  Wallet,
+  WalletBalance,
+} from '../../db/models';
 import { AppError } from '../../lib/errors';
 
 /**
@@ -81,10 +88,19 @@ export async function getWalletSummary(userId: number): Promise<{
 }> {
   const wallet = await getWalletForUser(userId);
 
+  // Plans are included because the wallet response is what the buy-credits UI
+  // prices bundles from. Without them the currency objects here would be a
+  // quietly incomplete version of the ones /api/currencies returns.
   const currencies = await Currency.findAll({
     where: { isActive: true },
-    include: [{ model: PlatformModule, as: 'module' }],
-    order: [['id', 'ASC']],
+    include: [
+      { model: PlatformModule, as: 'module' },
+      { model: CurrencyPlan, as: 'plans', where: { isActive: true }, required: false },
+    ],
+    order: [
+      ['id', 'ASC'],
+      [{ model: CurrencyPlan, as: 'plans' }, 'sortOrder', 'ASC'],
+    ],
   });
 
   const rows = await WalletBalance.findAll({ where: { walletId: wallet.id } });
