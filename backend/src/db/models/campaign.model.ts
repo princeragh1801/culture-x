@@ -41,6 +41,7 @@ export class Campaign extends Model<InferAttributes<Campaign>, InferCreationAttr
   declare updatedAt: CreationOptional<Date>;
 
   declare currency?: NonAttribute<Currency>;
+  declare ledgerEntry?: NonAttribute<LedgerEntry>;
 }
 
 Campaign.init(

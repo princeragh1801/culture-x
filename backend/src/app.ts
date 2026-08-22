@@ -3,6 +3,7 @@ import express, { type Express } from 'express';
 import { env } from './config/env';
 import { errorHandler, notFoundHandler } from './middleware/error-handler';
 import { authRouter } from './modules/auth/auth.routes';
+import { campaignsRouter } from './modules/campaigns/campaigns.routes';
 import { creditsRouter } from './modules/credits/credits.routes';
 import { currencyRouter } from './modules/currencies/currency.routes';
 import { webhookRouter } from './modules/stripe/webhook.routes';
@@ -28,6 +29,7 @@ export function createApp(): Express {
   app.use('/api/currencies', currencyRouter);
   app.use('/api/credits', creditsRouter);
   app.use('/api/wallet', walletRouter);
+  app.use('/api/campaigns', campaignsRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
