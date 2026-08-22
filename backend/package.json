@@ -20,7 +20,9 @@
     "db:reset": "npm run migrate:undo:all && npm run migrate && npm run seed",
     "db:test:reset": "cross-env NODE_ENV=test npm run migrate:undo:all && cross-env NODE_ENV=test npm run migrate && cross-env NODE_ENV=test npm run seed",
     "test": "cross-env NODE_ENV=test vitest run",
-    "test:watch": "cross-env NODE_ENV=test vitest"
+    "test:watch": "cross-env NODE_ENV=test vitest",
+    "check:invariants": "tsx src/scripts/check-invariants.ts",
+    "check:invariants:test": "cross-env NODE_ENV=test tsx src/scripts/check-invariants.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
