@@ -5,6 +5,7 @@ import { errorHandler, notFoundHandler } from './middleware/error-handler';
 import { authRouter } from './modules/auth/auth.routes';
 import { creditsRouter } from './modules/credits/credits.routes';
 import { currencyRouter } from './modules/currencies/currency.routes';
+import { webhookRouter } from './modules/stripe/webhook.routes';
 import { walletRouter } from './modules/wallet/wallet.routes';
 
 export function createApp(): Express {
@@ -12,9 +13,10 @@ export function createApp(): Express {
 
   app.use(cors({ origin: env.FRONTEND_URL, credentials: false }));
 
-  // The Stripe webhook is mounted before express.json() once it exists: verifying
-  // the Stripe-Signature header needs the exact bytes Stripe sent, and a JSON
-  // parser destroys them.
+  // Mounted before express.json() on purpose. Verifying the Stripe-Signature
+  // header needs the exact bytes Stripe sent, and a JSON parser destroys them by
+  // reparsing. Moving this line below the parser silently breaks every webhook.
+  app.use('/api/webhooks', webhookRouter);
 
   app.use(express.json({ limit: '100kb' }));
 
