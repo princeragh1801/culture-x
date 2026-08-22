@@ -3,6 +3,8 @@ import express, { type Express } from 'express';
 import { env } from './config/env';
 import { errorHandler, notFoundHandler } from './middleware/error-handler';
 import { authRouter } from './modules/auth/auth.routes';
+import { currencyRouter } from './modules/currencies/currency.routes';
+import { walletRouter } from './modules/wallet/wallet.routes';
 
 export function createApp(): Express {
   const app = express();
@@ -20,6 +22,8 @@ export function createApp(): Express {
   });
 
   app.use('/api/auth', authRouter);
+  app.use('/api/currencies', currencyRouter);
+  app.use('/api/wallet', walletRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

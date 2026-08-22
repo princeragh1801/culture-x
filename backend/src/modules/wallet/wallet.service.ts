@@ -1,5 +1,5 @@
 import type { Transaction } from 'sequelize';
-import { Currency, Wallet, WalletBalance } from '../../db/models';
+import { Currency, LedgerEntry, PlatformModule, Wallet, WalletBalance } from '../../db/models';
 import { AppError } from '../../lib/errors';
 
 /**
@@ -66,4 +66,64 @@ export async function getWalletForUser(userId: number): Promise<Wallet> {
   }
 
   return wallet;
+}
+
+/**
+ * Per-currency balances for a user's wallet.
+ *
+ * Every active currency is returned, including ones the user has never topped
+ * up, so the wallet screen always shows all three pots rather than only the
+ * funded ones.
+ */
+export async function getWalletSummary(userId: number): Promise<{
+  walletId: number;
+  balances: { currency: Currency; balance: number }[];
+}> {
+  const wallet = await getWalletForUser(userId);
+
+  const currencies = await Currency.findAll({
+    where: { isActive: true },
+    include: [{ model: PlatformModule, as: 'module' }],
+    order: [['id', 'ASC']],
+  });
+
+  const rows = await WalletBalance.findAll({ where: { walletId: wallet.id } });
+  const balanceByCurrency = new Map(rows.map((row) => [row.currencyId, row.balance]));
+
+  return {
+    walletId: wallet.id,
+    balances: currencies.map((currency) => ({
+      currency,
+      balance: balanceByCurrency.get(currency.id) ?? 0,
+    })),
+  };
+}
+
+export interface LedgerQuery {
+  currencyId?: number;
+  page: number;
+  pageSize: number;
+}
+
+/** Ledger history, newest first, optionally narrowed to one currency. */
+export async function getLedgerPage(
+  userId: number,
+  query: LedgerQuery,
+): Promise<{ entries: LedgerEntry[]; page: number; pageSize: number; total: number }> {
+  const wallet = await getWalletForUser(userId);
+
+  const where: { walletId: number; currencyId?: number } = { walletId: wallet.id };
+  if (query.currencyId !== undefined) {
+    where.currencyId = query.currencyId;
+  }
+
+  const { rows, count } = await LedgerEntry.findAndCountAll({
+    where,
+    include: [{ model: Currency, as: 'currency' }],
+    order: [['id', 'DESC']],
+    limit: query.pageSize,
+    offset: (query.page - 1) * query.pageSize,
+  });
+
+  return { entries: rows, page: query.page, pageSize: query.pageSize, total: count };
 }
