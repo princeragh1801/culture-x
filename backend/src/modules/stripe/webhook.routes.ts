@@ -23,25 +23,41 @@ webhookRouter.post(
   express.raw({ type: 'application/json' }),
   async (req: Request, res: Response): Promise<void> => {
     const signature = req.header('stripe-signature');
+    const bodyBytes = Buffer.isBuffer(req.body) ? req.body.length : -1;
 
     if (!signature) {
+      console.warn(`[stripe-webhook] rejected: no Stripe-Signature header (${bodyBytes} bytes)`);
       res.status(400).json({
         error: { code: 'INVALID_SIGNATURE', message: 'Missing Stripe-Signature header.' },
       });
       return;
     }
 
+    // Resolved before the try below, so a missing STRIPE_WEBHOOK_SECRET surfaces
+    // as 503 STRIPE_NOT_CONFIGURED rather than being swallowed and reported as a
+    // bad signature. Those need opposite fixes, and mislabelling one as the
+    // other sends whoever is debugging it at the wrong problem.
+    const webhookSecret = assertWebhookSecretConfigured();
+    const stripe = getStripe();
+
     let event: Stripe.Event;
 
     try {
       // Nothing has touched the database at this point. A forged or tampered
       // payload is rejected here, before any row is read or written.
-      event = getStripe().webhooks.constructEvent(
-        req.body as Buffer,
-        signature,
-        assertWebhookSecretConfigured(),
-      );
+      event = stripe.webhooks.constructEvent(req.body as Buffer, signature, webhookSecret);
     } catch (error) {
+      // Logged loudly. A rejected webhook is otherwise completely silent
+      // server-side, which makes a wrong STRIPE_WEBHOOK_SECRET look like Stripe
+      // simply never delivering anything. The secret's own prefix is printed —
+      // enough to compare against what `stripe listen` shows, without putting
+      // the secret itself in a log file.
+      console.warn(
+        `[stripe-webhook] rejected: signature did not verify. ` +
+          `body=${bodyBytes} bytes, configured secret starts "${webhookSecret.slice(0, 12)}…", ` +
+          `reason: ${error instanceof Error ? error.message.split('\n')[0] : 'unknown'}`,
+      );
+
       res.status(400).json({
         error: {
           code: 'INVALID_SIGNATURE',
@@ -52,6 +68,11 @@ webhookRouter.post(
     }
 
     const outcome = await handleStripeEvent(event);
+
+    // Every accepted event, so a live payment can be followed end to end.
+    console.log(
+      `[stripe-webhook] ${event.type} ${event.id} -> ${outcome.status}: ${outcome.detail}`,
+    );
 
     res.status(200).json({ received: true, outcome: outcome.status, detail: outcome.detail });
   },

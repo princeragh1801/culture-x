@@ -1,6 +1,7 @@
 import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { CreditPurchase, LedgerEntry, StripeWebhookEvent } from '../db/models';
+import { AppError } from '../lib/errors';
 import {
   app,
   balanceOf,
@@ -12,7 +13,7 @@ import {
   signPayload,
   type TestUser,
 } from './helpers';
-import { stubCheckoutSession } from './stripe-mock';
+import { stubCheckoutSession, webhookSecretResolver } from './stripe-mock';
 
 /**
  * Credits are granted exactly once per payment, and only on a verified webhook.
@@ -171,6 +172,33 @@ describe('stripe webhook', () => {
       await postWebhook(tampered, signature).expect(400);
       expect(await LedgerEntry.count()).toBe(0);
     });
+  });
+
+  /**
+   * A missing STRIPE_WEBHOOK_SECRET and a forged payload need opposite fixes —
+   * one is a deployment problem, the other is an attack — so they must not be
+   * reported the same way. An earlier version resolved the secret inside the
+   * verification try/catch, and every misconfigured server looked like it was
+   * receiving bad signatures.
+   */
+  it('reports a missing webhook secret as configuration, not a bad signature', async () => {
+    const purchase = await startPurchase(100);
+
+    webhookSecretResolver.mockImplementationOnce(() => {
+      throw new AppError('STRIPE_NOT_CONFIGURED', 503, 'Stripe webhooks are not configured.');
+    });
+
+    const payload = checkoutSessionEvent({
+      eventId: 'evt_unconfigured',
+      purchaseId: purchase.id,
+      amountTotal: purchase.amountPaise,
+    });
+
+    const response = await postWebhook(payload).expect(503);
+    expect(response.body.error.code).toBe('STRIPE_NOT_CONFIGURED');
+
+    expect(await StripeWebhookEvent.count()).toBe(0);
+    expect(await LedgerEntry.count()).toBe(0);
   });
 
   it('grants nothing for a session that completed without being paid', async () => {

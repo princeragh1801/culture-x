@@ -6,7 +6,7 @@ import { sequelize } from '../db/models';
  * leaving signature verification as the real implementation. See stripe-mock.ts.
  */
 vi.mock('../lib/stripe', async () => {
-  const { checkoutSessionCreate, TEST_WEBHOOK_SECRET } = await import('./stripe-mock');
+  const { checkoutSessionCreate, webhookSecretResolver } = await import('./stripe-mock');
   const StripeModule = await import('stripe');
   const Stripe = StripeModule.default;
 
@@ -18,7 +18,7 @@ vi.mock('../lib/stripe', async () => {
           Stripe.webhooks.constructEvent(payload, header, secret),
       },
     }),
-    assertWebhookSecretConfigured: () => TEST_WEBHOOK_SECRET,
+    assertWebhookSecretConfigured: webhookSecretResolver,
   };
 });
 

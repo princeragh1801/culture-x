@@ -14,6 +14,13 @@ export const checkoutSessionCreate = vi.fn();
 /** Matches STRIPE_WEBHOOK_SECRET in vitest.config.ts. */
 export const TEST_WEBHOOK_SECRET = 'whsec_test_secret_used_only_by_the_suite';
 
+/**
+ * Stands in for assertWebhookSecretConfigured. A spy rather than a constant, so
+ * a test can make it throw and check that a misconfigured server is reported as
+ * a configuration fault instead of a bad signature.
+ */
+export const webhookSecretResolver = vi.fn(() => TEST_WEBHOOK_SECRET);
+
 interface SessionStubOptions {
   id?: string;
   url?: string;
